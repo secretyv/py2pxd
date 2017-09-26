@@ -2,20 +2,20 @@
 # -*- coding: utf-8 -*-
 
 import logging
-logger = logging.getLogger("INRS.IEHSS.Python.cython.reader")
 
-from pxvariable import PXVariable
+from .pxvariable import PXVariable
+
+LOGGER = logging.getLogger("INRS.IEHSS.Python.cython.reader")
 
 class PXReader(object):
     def __init__(self):
         pass
 
-    @staticmethod 
+    @staticmethod
     def read_line(fi):
         """
         Load a complete statement that can be spread over multiple lines
         """
-        indt = 0
         ls = []
         while True:
             l = fi.readline()
@@ -28,8 +28,8 @@ class PXReader(object):
             # ---  Count ()
             np = 0
             for c in l:
-                if c == '(': np+=1
-                if c == ')': np-=1
+                if c == '(': np += 1
+                if c == ')': np -= 1
             # ---  Append to list
             ls.append(l)
             # ---  If () are balanced
@@ -37,10 +37,10 @@ class PXReader(object):
                 l = ' '.join(ls)
                 ls = []
                 while '  ' in l: l = l.replace('  ', ' ')
-                logger.debug('PXReader.read_line: %s' % l)
+                LOGGER.debug('PXReader.read_line: %s', l)
                 yield l
 
-    @staticmethod 
+    @staticmethod
     def read_locals(l):
         """
         Extract the local variables form a @cython.local statement.
@@ -54,4 +54,3 @@ class PXReader(object):
             var.read_var(lcl)
             lcls[var.name] = var
         return lcls
-                

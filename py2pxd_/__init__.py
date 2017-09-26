@@ -6,5 +6,3 @@ from pxvariable import PXVariable
 from pxfunction import PXFunction
 from pxclass    import PXClass
 from pxmodule   import PXModule, __version__, header
-
-

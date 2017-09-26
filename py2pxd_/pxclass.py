@@ -8,12 +8,14 @@ from pxreader   import PXReader
 from pxvariable import PXVariable
 from pxfunction import PXFunction
 
-logger = logging.getLogger("INRS.IEHSS.Python.cython.class")
+LOGGER = logging.getLogger("INRS.IEHSS.Python.cython.class")
 
 class PXClass(ast.NodeVisitor, PXReader):
     def __init__(self):
+        super(PXClass, self).__init__()
         self.node = None
         self.name = None
+        self.type = None
         self.bases = []
         self.meths = []
         self.attrs = {}
@@ -23,14 +25,14 @@ class PXClass(ast.NodeVisitor, PXReader):
 
     def merge(self, other):
         assert self == other
-        logger.debug('PXClass.merge: %s' % (self.name))
+        LOGGER.debug('PXClass.merge: %s', self.name)
         self.bases = self.bases + [i for i in other.bases if i not in self.bases]
 
         for k in other.attrs:
             self.attrs.setdefault(k, other.attrs[k])
-        for k in self.attrs.keys():
+        for k in self.attrs:
             try:
-                self.attrs[k].merge( other.attrs[k] )
+                self.attrs[k].merge(other.attrs[k])
             except KeyError:
                 pass
 
@@ -47,7 +49,7 @@ class PXClass(ast.NodeVisitor, PXReader):
     #--------------------
     def getOneBaseName(self, node):
         if isinstance(node, ast.Attribute):
-            return '.'.join( (self.getOneBaseName(node.value), node.attr) )
+            return '.'.join((self.getOneBaseName(node.value), node.attr))
         elif isinstance(node, ast.Name):
             return node.id
 
@@ -56,7 +58,8 @@ class PXClass(ast.NodeVisitor, PXReader):
 
     def visit_FunctionDef(self, node):
         isSpecialName = False
-        if len(node.name) > 4 and node.name[:2] == '__' and node.name[-2:] == '__': isSpecialName = True
+        if len(node.name) > 4 and node.name[:2] == '__' and node.name[-2:] == '__':
+            isSpecialName = True
 
         v = PXFunction(self)
         v.doVisit(node)
@@ -69,7 +72,7 @@ class PXClass(ast.NodeVisitor, PXReader):
             v = ast.literal_eval(node.value)
             t = type(v)
         except Exception as e:
-            logger.debug('Exception: %s' % str(e))
+            LOGGER.debug('Exception: %s', str(e))
             t = type(None)
         for tgt in node.targets:
             if tgt.id not in ['__slots__']:
@@ -80,7 +83,7 @@ class PXClass(ast.NodeVisitor, PXReader):
     def doVisit(self, node):
         self.node = node
         self.name = self.node.name
-        self.bases = [ self.getOneBaseName(n) for n in node.bases ]
+        self.bases = [self.getOneBaseName(n) for n in node.bases]
         self.generic_visit(node)
 
     def resolveHierarchy(self, knownClasses):
@@ -96,11 +99,11 @@ class PXClass(ast.NodeVisitor, PXReader):
         # ---  Remove attributes allready defined in parent
         for c in knownClasses:
             if c.name in self.bases:
-                logger.debug('PXClass.resolveHierarchy: %s is child of %s' % (self.name, c.name))
+                LOGGER.debug('PXClass.resolveHierarchy: %s is child of %s', self.name, c.name)
                 for a in c.attrs:
                     if a in self.attrs:
                         del self.attrs[a]
-        
+
     #--------------------
     #   Reader for pxd files
     #--------------------
@@ -108,33 +111,33 @@ class PXClass(ast.NodeVisitor, PXReader):
         try:
             attr = attr.split('cdef ')[1].strip()
             attr = attr.split('public ')[1].strip()
-        except:
+        except Exception:
             pass
         a = PXVariable()
         a.read_arg(attr)
         self.attrs[a.name] = a
 
     def read_decl(self, decl):
-        assert (decl[-1] == ':')
+        assert decl[-1] == ':'
         decl = decl[:-1]
         decl = decl.split('class ')[1]
         decl = decl.strip()
         try:
             d, h = decl.split('(', 1)
             h = h[:-1]
-            self.bases = [ h_.strip() for h_ in h.split(',') ]
-        except:
+            self.bases = [h_.strip() for h_ in h.split(',')]
+        except Exception:
             d = decl
         try:
             t, n = d.split(' ')
-        except:
+        except Exception:
             t, n = '', d
         self.type = t.strip()
         self.name = n.strip()
 
     def read(self, decl, fi):
         self.read_decl(decl)
-        logger.debug('PXClass.read: %s' % (self.name))
+        LOGGER.debug('PXClass.read: %s', self.name)
         lcls = {}
         for l in PXReader.read_line(fi):
             if l == 'pass':
@@ -144,7 +147,7 @@ class PXClass(ast.NodeVisitor, PXReader):
             elif l[0:6] == 'cpdef ':
                 f = PXFunction(self)
                 f.read(l, lcls)
-                logger.debug('    append method %s' % (f.name))
+                LOGGER.debug('    append method %s', f.name)
                 self.meths.append(f)
                 lcls = {}
             elif l[0:14] == '@cython.locals':
@@ -177,14 +180,13 @@ class PXClass(ast.NodeVisitor, PXReader):
             s = '{indent}pass\n'.format(indent=' '*indent)
             fo.write(s)
 
-                
+
 if __name__ == "__main__":
     def main():
-        c = PXClass(None)
+        c = PXClass()
 
     streamHandler = logging.StreamHandler()
-    logger.addHandler(streamHandler)
-    logger.setLevel(logging.DEBUG)
+    LOGGER.addHandler(streamHandler)
+    LOGGER.setLevel(logging.DEBUG)
 
     main()
-                

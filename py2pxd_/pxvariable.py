@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+A variable, with a type.
+"""
 
 import ast
 import logging
 
-logger = logging.getLogger("INRS.IEHSS.Python.cython.variable")
+LOGGER = logging.getLogger("INRS.IEHSS.Python.cython.variable")
 
 default_types = {
     type(None)   : 'object',
@@ -26,12 +29,12 @@ default_types = {
 }
 
 class PXVariable(object):
-    class ValUndefined:
+    class ValUndefined(object):
         pass
 
     def __init__(self):
         self.name = ''
-        self.type = default_types[ type(None) ]
+        self.type = default_types[type(None)]
         self.val  = PXVariable.ValUndefined
 
     def __eq__(self, other):
@@ -39,12 +42,12 @@ class PXVariable(object):
 
     def __str__(self):
         return '%s %s' % (self.type, self.name)
-        
+
     def merge(self, other):
         assert self == other
         cnflct = False
-        logger.debug('PXVariable.merge: %s' % (self.name))
-        logger.debug('    merge type:  %s and %s' % (self.type, other.type))
+        LOGGER.debug('PXVariable.merge: %s', self.name)
+        LOGGER.debug('    merge type:  %s and %s', self.type, other.type)
         if self.type != other.type:
             if   self.type in ['']:
                 if other.type not in ['']: self.type = other.type
@@ -55,17 +58,17 @@ class PXVariable(object):
             elif other.type in ['', 'None', 'object']:
                 pass
             elif self.type in ['long'] and other.type in ['size_t']:
-                logger.debug('    promoting %s to %s' % (self.type, other.type))
+                LOGGER.debug('    promoting %s to %s', self.type, other.type)
                 self.type = other.type
             else:
                 self.type = '__conflict__type__: "%s" "%s"' % (self.type, other.type)
                 cnflct = True
-        logger.debug('    merged to %s' % (self.type))
-        if cnflct: logger.warn('PXVariable.merge: %s: %s' % (self.name, self.type))
+        LOGGER.debug('    merged to %s', self.type)
+        if cnflct: LOGGER.warn('PXVariable.merge: %s: %s', self.name, self.type)
 
         cnflct = False
-        logger.debug('    merge val:  %s and %s' % (self.val, other.val))
-        if self.val  != other.val:  
+        LOGGER.debug('    merge val:  %s and %s', self.val, other.val)
+        if self.val != other.val:
             if   self.val in ['']:
                 if other.val not in ['', PXVariable.ValUndefined]: self.val = other.val
             elif self.val in ['None']:
@@ -77,19 +80,19 @@ class PXVariable(object):
             else:
                 self.val = '__conflict__val__: "%s" "%s"' % (self.val, other.val)
                 cnflct = True
-        logger.debug('    merged to %s' % str(self.val))
-        if cnflct: logger.warn('PXVariable.merge: %s: %s' % (self.name, self.type))
+        LOGGER.debug('    merged to %s', str(self.val))
+        if cnflct: LOGGER.warn('PXVariable.merge: %s: %s', self.name, self.type)
 
     #--------------------
     #   Python source code parser (ast visitors)
     #--------------------
-    def doVisit(self, name, type_name = None, value = ValUndefined):
-        logger.debug('PXVariable.doVisit: %s with type %s and value %s' % (name, type_name, value))
+    def doVisit(self, name, type_name=None, value=ValUndefined):
+        LOGGER.debug('PXVariable.doVisit: %s with type %s and value %s', name, type_name, value)
         v, t = PXVariable.ValUndefined, None
         try:
             v = ast.literal_eval(value)
             t = v
-        except Exception as e:
+        except Exception:
             if isinstance(value, ast.Attribute):
                 v = PXVariable.ValUndefined
                 t = None    # will become 'object'
@@ -115,7 +118,7 @@ class PXVariable(object):
 
         self.val  = v
         self.name = name
-        logger.debug('    %s as %s' % (self.name, self.val))
+        LOGGER.debug('    %s as %s', self.name, self.val)
 
     #--------------------
     #   Reader for pxd files
@@ -127,11 +130,11 @@ class PXVariable(object):
         arg = arg.strip()
         try:
             arg, v = arg.split('=')
-        except:
+        except Exception:
             v = ''
         try:
             t, n = arg.split(' ')
-        except:
+        except Exception:
             t, n = self.type, arg
         self.name = n.strip()
         self.type = t.strip()
@@ -143,19 +146,19 @@ class PXVariable(object):
         """
         try:
             n, t = var.split('=')
-        except:
+        except Exception:
             n, t = var, ''
         self.name = n.strip()
         self.type = t.strip()
         self.val  = PXVariable.ValUndefined
-        
+
 
 if __name__ == "__main__":
-    def main(opt_args = None):
+    def main(opt_args=None):
         v = PXVariable()
 
     streamHandler = logging.StreamHandler()
-    logger.addHandler(streamHandler)
-    logger.setLevel(logging.DEBUG)
+    LOGGER.addHandler(streamHandler)
+    LOGGER.setLevel(logging.DEBUG)
 
     main()

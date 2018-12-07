@@ -4,9 +4,9 @@
 import ast
 import logging
 
-from pxreader   import PXReader
-from pxvariable import PXVariable
-from pxfunction import PXFunction
+from .pxreader   import PXReader
+from .pxvariable import PXVariable
+from .pxfunction import PXFunction
 
 LOGGER = logging.getLogger("INRS.IEHSS.Python.cython.class")
 
@@ -54,9 +54,10 @@ class PXClass(ast.NodeVisitor, PXReader):
             return node.id
 
     def visit_ClassDef(self, node):
-        print ValueError('Nested classes are not yet supported')
+        print(ValueError('Nested classes are not yet supported'))
 
     def visit_FunctionDef(self, node):
+        LOGGER.debug('PXClass.visit_FunctionDef')
         isSpecialName = False
         if len(node.name) > 4 and node.name[:2] == '__' and node.name[-2:] == '__':
             isSpecialName = True
@@ -68,6 +69,7 @@ class PXClass(ast.NodeVisitor, PXReader):
 
     def visit_Assign(self, node):
         """Class attributes"""
+        LOGGER.debug('PXClass.visit_Assign')
         try:
             v = ast.literal_eval(node.value)
             t = type(v)
@@ -81,8 +83,10 @@ class PXClass(ast.NodeVisitor, PXReader):
                 self.attrs[a.name] = a
 
     def doVisit(self, node):
+        LOGGER.debug('PXClass.doVisit')
         self.node = node
         self.name = self.node.name
+        LOGGER.debug('PXClass.doVisit: class %s(...)', self.name)
         self.bases = [self.getOneBaseName(n) for n in node.bases]
         self.generic_visit(node)
 

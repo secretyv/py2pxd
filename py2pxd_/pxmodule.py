@@ -47,20 +47,43 @@ class PXModule(ast.NodeVisitor, PXReader):
     #   Python source code parser (ast visitors)
     #--------------------
     def visit_Module(self, node):
+        LOGGER.debug('PXModule.visit_Module')
         self.generic_visit(node)
         self.resolveHierarchy()
 
+    def visit_Assign(self, node):
+        LOGGER.debug('PXModule.visit_Assign')
+        isEnum = False
+        try:
+            if isinstance(node.value, ast.Call):
+                func = node.value.func
+                if isinstance(func, ast.Attribute):
+                    isEnum = (func.value.id == 'enum' and func.attr == 'Enum')
+                elif isinstance(func, ast.Name):
+                    isEnum = (func.id == 'Enum')
+        except AttributeError:
+            pass
+        if isEnum:
+            v = PXEnum()
+            v.doVisit(node)
+            self.items.append(v)
+        else:
+            self.generic_visit(node)
+
     def visit_ClassDef(self, node):
+        LOGGER.debug('PXModule.visit_ClassDef')
         v = PXClass()
         v.doVisit(node)
         self.items.append(v)
 
     def visit_FunctionDef(self, node):
+        LOGGER.debug('PXModule.visit_FunctionDef')
         v = PXFunction()
         v.doVisit(node)
         self.items.append(v)
 
     def resolveHierarchy(self):
+        LOGGER.debug('PXModule.resolveHierarchy')
         clss = [i for i in self.items if isinstance(i, PXClass)]
         for c in clss:
             c.resolveHierarchy(clss)

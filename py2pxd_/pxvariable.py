@@ -5,6 +5,7 @@ A variable, with a type.
 """
 
 import ast
+import enum
 import logging
 
 LOGGER = logging.getLogger("INRS.IEHSS.Python.cython.variable")
@@ -18,24 +19,22 @@ default_types = {
     type(dict()) : 'dict',
     type(tuple()): 'tuple',
     type(set())  : 'set',
-    type(u' ')   : 'unicode',
-    type(' ')    : 'unicode',
+    type(' ')    : 'str',
     #
     type(ast.List()) : 'list',
     type(ast.Dict()) : 'dict',
     type(ast.Tuple()): 'tuple',
     type(ast.Set())  : 'set',
-    type(ast.Str())  : 'unicode',
+    type(ast.Str())  : 'str',
 }
 
 class PXVariable(object):
-    class ValUndefined(object):
-        pass
+    Status = enum.Enum('Status', ('OK', 'Undefined', 'EvalError', 'Invalid'))
 
     def __init__(self):
         self.name = ''
         self.type = default_types[type(None)]
-        self.val  = PXVariable.ValUndefined
+        self.val  = PXVariable.Status.Undefined
 
     def __eq__(self, other):
         return self.name == other.name
@@ -70,12 +69,12 @@ class PXVariable(object):
         LOGGER.debug('    merge val:  %s and %s', self.val, other.val)
         if self.val != other.val:
             if   self.val in ['']:
-                if other.val not in ['', PXVariable.ValUndefined]: self.val = other.val
+                if other.val not in ['', PXVariable.Status.Undefined]: self.val = other.val
             elif self.val in ['None']:
-                if other.val not in ['', 'None', PXVariable.ValUndefined]: self.val = other.val
+                if other.val not in ['', 'None', PXVariable.Status.Undefined]: self.val = other.val
             elif self.val in ['object']:
                 if other.val not in ['', 'None', 'object']: self.val = other.val
-            elif other.val in ['', 'None', 'object', '*', PXVariable.ValUndefined]:
+            elif other.val in ['', 'None', 'object', '*', PXVariable.Status.Undefined]:
                 pass
             else:
                 self.val = '__conflict__val__: "%s" "%s"' % (self.val, other.val)
@@ -86,26 +85,26 @@ class PXVariable(object):
     #--------------------
     #   Python source code parser (ast visitors)
     #--------------------
-    def doVisit(self, name, type_name=None, value=ValUndefined):
+    def doVisit(self, name, type_name=None, value=Status.Undefined):
         LOGGER.debug('PXVariable.doVisit: %s with type %s and value %s', name, type_name, value)
-        v, t = PXVariable.ValUndefined, None
+        v, t = PXVariable.Status.Undefined, None
         try:
             v = ast.literal_eval(value)
             t = v
         except Exception:
             if isinstance(value, ast.Attribute):
-                v = PXVariable.ValUndefined
+                v = PXVariable.Status.EvalError
                 t = None    # will become 'object'
-            elif value != PXVariable.ValUndefined:
-                v = PXVariable.ValUndefined
+            elif value != PXVariable.Status.Undefined:
+                v = PXVariable.Status.Invalid
                 t = None    # will become 'object'
             else:
-                v = PXVariable.ValUndefined
+                v = PXVariable.Status.Undefined
                 t = type_name
 
         if isinstance(t, type):
             self.type = default_types[t]
-        elif isinstance(t, (str, unicode)):
+        elif isinstance(t, str):
             try:
                 self.type = default_types[t]
             except KeyError:
@@ -139,7 +138,7 @@ class PXVariable(object):
             t, n = self.type, arg
         self.name = n.strip()
         self.type = t.strip()
-        self.val  = v.strip() if v else PXVariable.ValUndefined
+        self.val  = v.strip() if v else PXVariable.Status.Undefined
 
     def read_var(self, var):
         """
@@ -151,7 +150,7 @@ class PXVariable(object):
             n, t = var, ''
         self.name = n.strip()
         self.type = t.strip()
-        self.val  = PXVariable.ValUndefined
+        self.val  = PXVariable.Status.Undefined
 
 
 if __name__ == "__main__":

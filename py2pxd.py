@@ -5,10 +5,12 @@ py2pxd
 Extract cython pxd information from python .py files
 """
 
+import sys
+assert sys.version_info >= (3,6)
+
 import ast
 import optparse
 import os
-import sys
 try:
     import hashlib
     HashlibMD5 = hashlib.md5
@@ -19,7 +21,7 @@ import logging
 
 import py2pxd_ as PX
 
-LOGGER = logging.getLogger("INRS.IEHSS.Python.cython")
+LOGGER = logging.getLogger("INRS.IEHSS.Python.cython.function")
 
 def xeqOneFile(fin, fout):
     """
@@ -57,8 +59,8 @@ def xeqOneFile(fin, fout):
     if os.path.isfile(ftmp):
         if os.path.isfile(fout):
             lh = len(PX.HEADER)
-            tmp_fic = file(ftmp, 'rb')
-            out_fic = file(fout, 'rb')
+            tmp_fic = open(ftmp, 'rb')
+            out_fic = open(fout, 'rb')
             tmp_md5 = HashlibMD5(tmp_fic.read()[lh:])
             out_md5 = HashlibMD5(out_fic.read()[lh:])
             tmp_fic.close()
@@ -98,8 +100,6 @@ def main(opt_args=None):
         return
     if not options.out:
         options.out = os.path.splitext(options.inp)[0] + '.pxd'
-        #parser.print_help()
-        #return
 
     # --- Execute
     LOGGER.info('%s --> %s', options.inp, options.out)

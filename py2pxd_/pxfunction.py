@@ -53,7 +53,7 @@ class PXFunction(ast.NodeVisitor):
 
         for k in other.locls:
             self.locls.setdefault(k, other.locls[k])
-        for k in self.locls.keys():
+        for k in list(self.locls.keys()):
             try:
                 self.locls[k].merge(other.locls[k])
             except KeyError:
@@ -63,18 +63,24 @@ class PXFunction(ast.NodeVisitor):
     #   Python source code parser (ast visitors)
     #--------------------
     def generic_visit(self, node):
-        LOGGER.debug('PXFunction.generic_visit: %s', type(node).__name__)
+        #LOGGER.debug('PXFunction.generic_visit: %s', type(node).__name__)
         ast.NodeVisitor.generic_visit(self, node)
 
     def doVisit(self, node):
+        LOGGER.debug('PXFunction.doVisit')
         self.node = node
         self.name = self.node.name
+        LOGGER.debug('PXFunction.doVisit: def %s(...)', self.name)
         self.generic_visit(node)
 
+    def visit_Lambda(self, node):
+        LOGGER.debug('PXFunction.visit_Lambda: skip')
+        pass
+
     def visit_FunctionDef(self, node):
-        LOGGER.info('PXFunction.visit_FunctionDef')
+        LOGGER.debug('PXFunction.visit_FunctionDef')
         if self.name:
-            print ValueError('Nested functions are not yet supported: %s.%s:%i', self.name, node.name, node.lineno)
+            print(ValueError('Nested functions are not yet supported: %s.%s:%i', self.name, node.name, node.lineno))
         else:
             self.name = node.name
             ast.NodeVisitor.generic_visit(self, node)
@@ -89,7 +95,7 @@ class PXFunction(ast.NodeVisitor):
         # ---  Itère sur les (args, vals)
         for a, v in zip(args, vals):
             arg = PXVariable()
-            arg.doVisit(a.id, value=v)
+            arg.doVisit(a.arg, value=v)
             if arg.name == 'self' and self.clss:
                 arg.type = self.clss.name
             self.args.append(arg)
@@ -230,8 +236,8 @@ class PXFunction(ast.NodeVisitor):
             arg = ''
             if a.type: arg += '%s ' % a.type
             if a.name: arg += '%s'  % a.name
-            if a.val is not PXVariable.ValUndefined:
-                if isinstance(a.val, (str, unicode)) and a.val[0:12] == '__conflict__':
+            if a.val not in [PXVariable.Status.Undefined, PXVariable.Status.Invalid]:
+                if isinstance(a.val, str) and a.val[0:12] == '__conflict__':
                     arg += a.val
                 else:
                     arg += '=*'
@@ -244,10 +250,13 @@ class PXFunction(ast.NodeVisitor):
 if __name__ == "__main__":
     def main(opt_args=None):
         src = """
-def test(i):
+import enum
+zz = enum.Enum('val', ('a', 'b', 'c'))
+
+def test(i=zz.a):
     a, b = 0, 0
     for c, d in zip(range(10), range(10)):
-       print c
+       print(c)
     return True
 """
         tree = ast.parse(src)

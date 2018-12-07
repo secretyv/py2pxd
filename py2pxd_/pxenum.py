@@ -4,9 +4,8 @@
 import ast
 import logging
 
-from pxreader   import PXReader
-from pxvariable import PXVariable
-from pxfunction import PXFunction
+from .pxreader   import PXReader
+from .pxvariable import PXVariable
 
 LOGGER = logging.getLogger("INRS.IEHSS.Python.cython.class")
 
@@ -36,11 +35,26 @@ class PXEnum(ast.NodeVisitor, PXReader):
     #   Python source code parser (ast visitors)
     #--------------------
     def visit_ClassDef(self, node):
-        print ValueError('Nested classes are not yet supported')
+        print(ValueError('Nested enum are not supported'))
+
+    def visit_Tuple(self, node):
+        LOGGER.debug('PXEnum.visit_Tuple')
+        for item in node.elts:
+            a = PXVariable()
+            a.doVisit(item.s)
+            self.attrs.append(a)
+
+    def visit_Call(self, node):
+        LOGGER.debug('PXEnum.visit_Call')
+        self.generic_visit(node)
 
     def doVisit(self, node):
+        LOGGER.debug('PXEnum.doVisit')
+        assert isinstance(node, ast.Assign)
+        assert isinstance(node.value, ast.Call)
         self.node = node
-        self.name = self.node.name
+        self.name = self.node.targets[0].id
+        LOGGER.debug('PXEnum.doVisit: enum %s', self.name)
         self.generic_visit(node)
 
     #--------------------
@@ -94,7 +108,8 @@ class PXEnum(ast.NodeVisitor, PXReader):
             for a in self.attrs:
                 attr = ''
                 if a.name: attr += '%s'  % a.name
-                if a.val is not PXVariable.ValUndefined: attr += ' = %s' % a.val
+                if a.val not in [PXVariable.Status.Undefined, PXVariable.Status.Invalid]:
+                    attr += ' = %s' % a.val
                 fmt = '{indent}{attr}\n'
                 s = fmt.format(indent=' '*indent, attr=attr)
                 fo.write(s)

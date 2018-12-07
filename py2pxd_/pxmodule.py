@@ -8,8 +8,9 @@ import logging
 from .pxreader   import PXReader
 from .pxfunction import PXFunction
 from .pxclass    import PXClass
+from .pxenum     import PXEnum
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 LOGGER = logging.getLogger("INRS.IEHSS.Python.cython.module")
 
@@ -75,6 +76,10 @@ class PXModule(ast.NodeVisitor, PXReader):
                     self.imprt.append(l)
             elif l[0:11] == 'cdef class ':
                 c = PXClass()
+                c.read(l, fi)
+                self.items.append(c)
+            elif l[0:10] == 'cdef enum ':
+                c = PXEnum()
                 c.read(l, fi)
                 self.items.append(c)
             elif l[0:6] == 'cpdef ':

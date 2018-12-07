@@ -130,6 +130,7 @@ class PXVariable(object):
         arg = arg.strip()
         try:
             arg, v = arg.split('=')
+            arg = arg.strip()
         except Exception:
             v = ''
         try:

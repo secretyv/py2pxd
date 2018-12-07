@@ -56,7 +56,7 @@ def xeqOneFile(fin, fout):
     # ---  Manage backup and update
     if os.path.isfile(ftmp):
         if os.path.isfile(fout):
-            lh = len(PX.header)
+            lh = len(PX.HEADER)
             tmp_fic = file(ftmp, 'rb')
             out_fic = file(fout, 'rb')
             tmp_md5 = HashlibMD5(tmp_fic.read()[lh:])
@@ -81,6 +81,8 @@ def main(opt_args=None):
     # ---  Define options
     usage  = '%s [options]' % __package__
     parser = optparse.OptionParser(usage)
+    parser.add_option("-v", "--verbose", dest="vrb", default=False, action="store_true",
+                      help="increase verbosity")
     parser.add_option("-i", "--fi", "--input", dest="inp", default=None,
                       help="input file to cythonize", metavar="input_path")
     parser.add_option("-o", "--fo", "--output", dest="out", default=None,
@@ -89,6 +91,8 @@ def main(opt_args=None):
     # ---  Parse options
     if not opt_args: opt_args = sys.argv[1:]
     options, _ = parser.parse_args(opt_args)
+    if options.vrb:
+        LOGGER.setLevel(logging.DEBUG)
     if not options.inp:
         parser.print_help()
         return
